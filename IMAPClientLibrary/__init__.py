@@ -1,13 +1,13 @@
 import base64
-import datetime
 import email
 import quopri
 import re
 from datetime import time
+from datetime import datetime
 from time import sleep
 from imapclient import IMAPClient
-from robot.model import keyword
 from robot.api import logger
+from robot.api.deco import keyword
 from robot.utils import DotDict
 
 __version__ = '0.1.0'
@@ -31,17 +31,19 @@ class IMAPClientLibrary:
     ROBOT_LIBRARY_VERSION = __version__
     ROBOT_LISTENER_API_VERSION = 3
 
-    def __init__(self, host, email, password):
-        self.IMAP_HOST = host
-        self.IMAP_EMAIL = email
-        self.IMAP_PASSWORD = password
-
+    def __init__(self):
         self._email_index = None
         self._imap = None
         self._mails = []
         self._mp_iter = None
         self._mp_msg = None
         self._part = None
+
+    @keyword
+    def init_email_client(self, host, email, password):
+        self.IMAP_HOST = host
+        self.IMAP_EMAIL = email
+        self.IMAP_PASSWORD = password
 
     @keyword
     def wait_for_email(self, **kwargs):

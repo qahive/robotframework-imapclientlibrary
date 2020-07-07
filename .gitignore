@@ -2,3 +2,8 @@
 build/
 dist/
 robotframework_IMAPClientLibrary.egg-info/
+Examples/.project
+Examples/log.html
+Examples/output.xml
+Examples/red.xml
+Examples/report.html
