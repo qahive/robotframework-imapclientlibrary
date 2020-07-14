@@ -90,7 +90,7 @@ class IMAPClientLibrary:
                 logger.info(d1)
                 index = 0
 
-                for msgid, data in client.fetch(messages, ['ENVELOPE']).items():
+                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE']).items(), reverse=True):
                     envelope = data[b'ENVELOPE']
                     mail_from = str(envelope.from_[0])
                     mail_to = str(envelope.to[0])
