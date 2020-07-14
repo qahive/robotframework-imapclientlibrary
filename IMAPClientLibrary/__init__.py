@@ -2,8 +2,8 @@ import base64
 import email
 import quopri
 import re
-from datetime import time
 from datetime import datetime
+from datetime import timedelta
 from time import sleep
 from imapclient import IMAPClient
 from robot.api import logger
@@ -69,8 +69,7 @@ class IMAPClientLibrary:
         """
         # Poll frequency and timeout
         poll_frequency = 10
-        timeout = int(kwargs.pop('timeout', 180))
-        end_time = time() + timeout
+        end_time = datetime.now() + timedelta(seconds=int(kwargs.pop('timeout', 180)))
 
         expect_sender = kwargs.pop('sender', None)
         expect_recipient = kwargs.pop('recipient', None)
@@ -78,14 +77,14 @@ class IMAPClientLibrary:
         expect_body = kwargs.pop('body', None)
         found_email = None
 
-        while time() < end_time:
+        while datetime.now() < end_time:
             with IMAPClient(host=self.IMAP_HOST) as client:
                 logger.info('Open mail box...')
                 client.login(self.IMAP_EMAIL, self.IMAP_PASSWORD)
                 client.select_folder('INBOX')
                 logger.info('Open mail box success')
 
-                d1 = datetime.now() - datetime.timedelta(minutes=10)
+                d1 = datetime.now() - timedelta(hours=24)
                 messages = client.search([u'UNSEEN', u'SINCE', d1])
                 logger.info('%d messages from mail server.' % len(messages))
                 logger.info(d1)
@@ -147,11 +146,10 @@ class IMAPClientLibrary:
                 if found_email is not None:
                     return found_email
 
-                if time() < end_time:
+                if datetime.now() < end_time:
                     sleep(poll_frequency)
 
             raise Exception('Can\'t find the specific email.')
-
 
 
     @keyword
