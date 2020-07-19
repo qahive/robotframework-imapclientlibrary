@@ -90,7 +90,7 @@ class IMAPClientLibrary:
                 logger.info(d1)
                 index = 0
 
-                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE']).items(), reverse=True):
+                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE', 'BODY[TEXT]']).items(), reverse=True):
                     envelope = data[b'ENVELOPE']
                     mail_from = str(envelope.from_[0])
                     mail_to = str(envelope.to[0])
@@ -98,7 +98,7 @@ class IMAPClientLibrary:
                     mail_subject = self._encoded_words_to_text(mail_subject)
                     logger.info('Subject ' + mail_subject)
                     logger.info(envelope)
-                    mail_body = ''
+                    mail_body = data[b'BODY[TEXT]']
 
                     if expect_sender is not None and (
                         expect_sender.lower() != mail_from.lower() and '<' + expect_sender.lower() + '>' not in mail_from.lower()):
@@ -111,26 +111,9 @@ class IMAPClientLibrary:
                     if expect_subject is not None and (not re.match(expect_subject, mail_subject)):
                         continue
 
-                    for response_part in client.fetch([msgid], ['RFC822']).items():
-                        if isinstance(response_part, tuple):
-                            msg = email.message_from_string(str(response_part[1][b'RFC822'], 'utf-8'))
-                            if msg.is_multipart():
-                                for payload in msg.get_payload():
-                                    try:
-                                        mail_body += str(msg.get_payload(decode=True), 'utf-8')
-                                    except:
-                                        # in-case that utf-8 not support
-                                        mail_body += str(msg.get_payload(decode=True))
-                            else:
-                                try:
-                                    mail_body += str(msg.get_payload(decode=True), 'utf-8')
-                                except:
-                                    # in-case that utf-8 not support
-                                    mail_body += str(msg.get_payload(decode=True))
-
                     if expect_body is not None and not re.search(expect_body, mail_body):
                         continue
-
+                    
                     found_email = DotDict({
                         'messageId': msgid,
                         'recipient': mail_to,
@@ -161,7 +144,6 @@ class IMAPClientLibrary:
             logger.info('Open test mail box success')
             client.delete_messages([email_obj['messageId']])
             logger.info('Delete email success')
-
 
     @keyword
     def get_links_from_email(self, email_obj):
