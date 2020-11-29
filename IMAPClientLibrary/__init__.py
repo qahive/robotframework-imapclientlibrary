@@ -10,7 +10,7 @@ from robot.api import logger
 from robot.api.deco import keyword
 from robot.utils import DotDict
 
-__version__ = '0.1.0'
+__version__ = '0.1.1'
 
 
 class IMAPClientLibrary:
@@ -90,7 +90,7 @@ class IMAPClientLibrary:
                 logger.info(d1)
                 index = 0
 
-                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE', 'BODY[TEXT]']).items(), reverse=True):
+                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE', 'BODY[TEXT]', 'RFC822']).items(), reverse=True):
                     envelope = data[b'ENVELOPE']
                     mail_from = str(envelope.from_[0])
                     mail_to = str(envelope.to[0])
@@ -113,13 +113,17 @@ class IMAPClientLibrary:
 
                     if expect_body is not None and not re.search(expect_body, mail_body):
                         continue
+
+                    raw = email.message_from_bytes(data[b'RFC822'])  # Return a message object structure from a bytes-like object[6]
+                    mail_attachments = self._get_attachments(raw)  # Runs above function
                     
                     found_email = DotDict({
                         'messageId': msgid,
                         'recipient': mail_to,
                         'sender': mail_from,
                         'subject': mail_subject,
-                        'body': mail_body
+                        'body': mail_body,
+                        'attachments': mail_attachments
                     })
 
                     if found_email is not None:
@@ -133,7 +137,6 @@ class IMAPClientLibrary:
                     sleep(poll_frequency)
 
             raise Exception('Can\'t find the specific email.')
-
 
     @keyword
     def delete_email(self, email_obj):
@@ -157,6 +160,25 @@ class IMAPClientLibrary:
         | Get Links From Email | email |
         """
         return re.findall(r'href=[\'"]?([^\'" >]+)', email_obj['body'])
+
+    def _get_attachments(self, msg):
+        file_names = []
+        # Takes the raw data and breaks it into different 'parts' & python processes it 1 at a time [1]
+        for part in msg.walk():
+            if part.get_content_maintype() == 'multipart':  # Checks if the email is the correct 'type'.
+                        # If it's a 'multipart', then it is incorrect type of email that can possible have an attachment
+                continue  # Continue command skips the rest of code and checks the next 'part'
+
+            if part.get('Content-Disposition') is None:  # Checks the 'Content-Disposition' field of the message.
+                                # If it's empty, or "None", then we need to leave and go to the next part
+                continue  # Continue command skips the rest of code and checks the next 'part'
+            # So if the part isn't a 'multipart' type and has a 'Content-Disposition'...
+            file_name = part.get_filename()  # Get the filename
+            if bool(file_name):  # If bool(file_name) returns True
+                with open(file_name, 'wb') as f:  # Opens file, w = creates if it doesn't exist / b = binary mode [2]
+                    f.write(part.get_payload(decode=True))  # Returns the part is carrying, or it's payload, and decodes [3]
+                file_names.append(file_name)
+        return file_names
 
     def _encoded_words_to_text(self, encoded_words):
         final_word = ''
