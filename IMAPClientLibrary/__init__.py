@@ -10,7 +10,7 @@ from robot.api import logger
 from robot.api.deco import keyword
 from robot.utils import DotDict
 
-__version__ = '0.1.1'
+__version__ = '0.1.2'
 
 
 class IMAPClientLibrary:
@@ -59,6 +59,7 @@ class IMAPClientLibrary:
         - ``sender``: Email sender. (Default None)
         - ``subject``: Email subject. Support regexp (Default None)
         - ``body``: Email body text. Support regexp (Default None)
+        - ``time_delta``: Maximum Time Delta in hours. (Default 24 hours)
 
         Return:
         - ``email``: Email dictionary {messageId: '', recipient: '', sender: '', subject: '', body: ''}
@@ -75,6 +76,8 @@ class IMAPClientLibrary:
         expect_recipient = kwargs.pop('recipient', None)
         expect_subject = kwargs.pop('subject', None)
         expect_body = kwargs.pop('body', None)
+        time_delta_hour = kwargs.pop('time_delta', 24)
+
         found_email = None
 
         while datetime.now() < end_time:
@@ -84,13 +87,13 @@ class IMAPClientLibrary:
                 client.select_folder('INBOX')
                 logger.info('Open mail box success')
 
-                d1 = datetime.now() - timedelta(hours=24)
+                d1 = datetime.now() - timedelta(hours=time_delta_hour)
                 messages = client.search([u'UNSEEN', u'SINCE', d1])
                 logger.info('%d messages from mail server.' % len(messages))
                 logger.info(d1)
                 index = 0
 
-                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE', 'BODY[TEXT]', 'RFC822']).items(), reverse=True):
+                for msgid, data in sorted(client.fetch(messages, ['ENVELOPE', 'BODY.PEEK[TEXT]', 'RFC822']).items(), reverse=True):
                     envelope = data[b'ENVELOPE']
                     mail_from = str(envelope.from_[0])
                     mail_to = str(envelope.to[0])
@@ -114,6 +117,7 @@ class IMAPClientLibrary:
                     if expect_body is not None and not re.search(expect_body, mail_body):
                         continue
 
+                    client.add_flags(msgid, ['SEEN'])
                     raw = email.message_from_bytes(data[b'RFC822'])  # Return a message object structure from a bytes-like object[6]
                     mail_attachments = self._get_attachments(raw)  # Runs above function
                     
