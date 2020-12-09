@@ -76,7 +76,7 @@ class IMAPClientLibrary:
         expect_recipient = kwargs.pop('recipient', None)
         expect_subject = kwargs.pop('subject', None)
         expect_body = kwargs.pop('body', None)
-        time_delta_hour = kwargs.pop('time_delta', 24)
+        time_delta_hour = int(kwargs.pop('time_delta', 24))
 
         found_email = None
 
