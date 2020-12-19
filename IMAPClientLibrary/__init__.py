@@ -6,11 +6,12 @@ from datetime import datetime
 from datetime import timedelta
 from time import sleep
 from imapclient import IMAPClient
+from email.header import decode_header
 from robot.api import logger
 from robot.api.deco import keyword
 from robot.utils import DotDict
 
-__version__ = '0.1.2'
+__version__ = '0.1.3'
 
 
 class IMAPClientLibrary:
@@ -178,7 +179,12 @@ class IMAPClientLibrary:
                 continue  # Continue command skips the rest of code and checks the next 'part'
             # So if the part isn't a 'multipart' type and has a 'Content-Disposition'...
             file_name = part.get_filename()  # Get the filename
+
             if bool(file_name):  # If bool(file_name) returns True
+                file_name = decode_header(str(file_name))[0][0]
+                if type(file_name) == bytes:
+                    file_name = file_name.decode("utf-8")
+                logger.info('attach file: '+file_name)
                 with open(file_name, 'wb') as f:  # Opens file, w = creates if it doesn't exist / b = binary mode [2]
                     f.write(part.get_payload(decode=True))  # Returns the part is carrying, or it's payload, and decodes [3]
                 file_names.append(file_name)
